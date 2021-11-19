@@ -1,0 +1,7 @@
+curl --location --request POST 'localhost:8080/save' \
+--header 'Content-Type: application/json' \
+--header 'Cookie: sessionid=ruccx10294xtkqwgjp3v518vn9uebjn0' \
+--data-raw '{
+    "user_name": "Olga Scheps",
+    "messageMAC": "ljb5FD9qRn7nJVRTAKdvSokStkCjz05ZA7JG+lCS1DY="
+}'
