@@ -1,8 +1,7 @@
 package main
 
 import (
-	"crypto/hmac"
-	"crypto/sha256"
+	"crypto/ed25519"
 	"encoding/base64"
 	"net/http"
 
@@ -10,11 +9,33 @@ import (
 )
 
 type SaveRequestBody struct {
-	UserName   string `json:"user_name"`
-	MessageMAC string `json:"messageMAC"`
+	UserName         string `json:"user_name"`
+	EncodedSignature string `json:"signature"`
 }
 
-const invalidMACMessage string = "Invalid MAC Provided"
+var encodedPublicKey = "nVk2y5okFLAlxY0FQrn+Ao7cALgFLTiAqUHOlXZR4JU="
+
+// var encodedPrivateKey = "ltVQ/Rx52hgQ9vDh8ZCiqFV+x6IZGviuAZivo+Ads7KdWTbLmiQUsCXFjQVCuf4CjtwAuAUtOICpQc6VdlHglQ=="
+
+func getPublicKey() (ed25519.PublicKey, error) {
+	decoded, err := base64.StdEncoding.DecodeString(encodedPublicKey)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return ed25519.PublicKey(decoded), nil
+}
+
+func decodeSignature(signature string) ([]byte, error) {
+	decoded, err := base64.StdEncoding.DecodeString(signature)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return decoded, nil
+}
 
 func main() {
 	router := gin.Default()
@@ -25,28 +46,28 @@ func main() {
 }
 
 func save(context *gin.Context) {
-	signing_key := "arpit"
+	publicKey, err := getPublicKey()
+
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+		return
+	}
 
 	var requestBody SaveRequestBody
 	context.BindJSON(&requestBody)
 
-	messageMAC, err := base64.StdEncoding.DecodeString(requestBody.MessageMAC)
+	decodedSignature, err := decodeSignature(requestBody.EncodedSignature)
 
 	if err != nil {
-		context.JSON(http.StatusBadRequest, gin.H{"error": invalidMACMessage})
+		context.JSON(http.StatusBadRequest, gin.H{"error": "Invalid signature"})
 		return
 	}
 
-	if ValidMAC(requestBody.UserName, messageMAC, signing_key) {
-		context.JSON(http.StatusOK, gin.H{"message": "Name updated succesfully"})
-	} else {
-		context.JSON(http.StatusBadRequest, gin.H{"error": invalidMACMessage})
-	}
-}
+	validSignature := ed25519.Verify(publicKey, []byte(requestBody.UserName), decodedSignature)
 
-func ValidMAC(message string, messageMAC []byte, key string) bool {
-	mac := hmac.New(sha256.New, []byte(key))
-	mac.Write([]byte(message))
-	expectedMAC := mac.Sum(nil)
-	return hmac.Equal(messageMAC, expectedMAC)
+	if validSignature {
+		context.JSON(http.StatusOK, gin.H{"message": "Name updated successfully"})
+	} else {
+		context.JSON(http.StatusBadRequest, gin.H{"message": "Invalid signature"})
+	}
 }
