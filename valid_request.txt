@@ -1,0 +1,6 @@
+curl --location --request POST 'localhost:8080/save' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "user_name": "Olga Scheps",
+    "signature": "QXC0ddjQW0bRVkV+3uknwkm8VJlna9QvLpvakcSZT7bsHJTDdizJfQmjE1anyqiyHAc0CXxf0wJ5KQyfNXK5DA=="
+}'
